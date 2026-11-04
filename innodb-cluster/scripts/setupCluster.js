@@ -38,6 +38,50 @@ function persistGroupReplication(host) {
   }
 }
 
+
+// Solo per istanze SECONDARY nuove e sacrificabili del laboratorio.
+// Clone sovrascrive completamente il datadir del destinatario. Non usare
+// questa funzione su nodi che contengono database degli studenti.
+function addDisposableSecondaryIfMissing(cluster, host) {
+  var address = host + ':3306';
+  var topology = cluster.status().defaultReplicaSet.topology;
+  for (var key in topology) {
+    if (!Object.prototype.hasOwnProperty.call(topology, key)) continue;
+    if (key === address || topology[key].address === address) {
+      if (topology[key].status === 'ONLINE') {
+        print('Nodo ' + address + ' gia ONLINE: nessun clone.');
+        return;
+      }
+      throw new Error(address + ' e gia registrato nel cluster ma non ONLINE. ' +
+        'Nessuna sovrascrittura automatica: eseguire diagnosi/rejoin manuale.');
+    }
+  }
+
+  var s = mysql.getClassicSession(instance(host));
+  try {
+    // Un nodo nuovo del laboratorio non deve contenere database applicativi.
+    // E' una salvaguardia, non un sistema di backup o di verifica dei dati.
+    var schemas = s.runSql(
+      "SELECT SCHEMA_NAME FROM information_schema.SCHEMATA " +
+      "WHERE SCHEMA_NAME NOT IN " +
+      "('mysql', 'information_schema', 'performance_schema', 'sys')"
+    ).fetchAll();
+    if (schemas.length !== 0) {
+      throw new Error('Clone RIFIUTATO su ' + host +
+        ': presenti database non di sistema (' + schemas.length +
+        '). Proteggere i dati ed eseguire un recupero manuale.');
+    }
+  } finally {
+    s.close();
+  }
+
+  print('Aggiunta di ' + address + ' con Clone: SOLO nodo vuoto del laboratorio.');
+  cluster.addInstance(instance(host), {
+    localAddress: host + ':33061',
+    recoveryMethod: 'clone'
+  });
+}
+
 try {
   shell.connect('mysql://root@mysql-server-1:3306', dbPass);
   var session = shell.getSession();
@@ -53,17 +97,17 @@ try {
       communicationStack: 'XCOM',
       localAddress: 'mysql-server-1:33061'
     });
-    cluster.addInstance(instance('mysql-server-2'), {
-      localAddress: 'mysql-server-2:33061'
-    });
-    cluster.addInstance(instance('mysql-server-3'), {
-      localAddress: 'mysql-server-3:33061'
-    });
   } else {
-    // Non ricreare automaticamente il cluster esistente.
-    print('Metadata del cluster esistente: verifica invece del bootstrap.');
+    // La prima esecuzione potrebbe essersi fermata DOPO createCluster().
+    // Riusiamo il cluster, senza ricrearlo o forzare il quorum.
+    print('Cluster esistente: verifica dei membri e ripresa sicura del bootstrap.');
     cluster = dba.getCluster(clusterName);
   }
+
+  // Aggiungere solo nodi mai registrati. Non clonare automaticamente un nodo
+  // offline o una precedente replica: potrebbe contenere dati importanti.
+  addDisposableSecondaryIfMissing(cluster, 'mysql-server-2');
+  addDisposableSecondaryIfMissing(cluster, 'mysql-server-3');
 
   var topology = cluster.status().defaultReplicaSet.topology;
   var online = 0;
