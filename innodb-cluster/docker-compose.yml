@@ -79,7 +79,7 @@ services:
     entrypoint: ["/bin/sh", "-ec"]
     command:
       - >-
-        mysqlsh --js --file /scripts/setupCluster.js
+        mysqlsh --no-defaults --js --file /scripts/setupCluster.js
         && MYSQL_PWD="$$MYSQL_PASSWORD" mysql --host=mysql-server-1 --user=root < /scripts/db.sql
     env_file: mysql-shell.env
     volumes:
