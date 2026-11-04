@@ -122,3 +122,26 @@ Il bootstrap richiede `binlog_transaction_dependency_tracking=WRITESET`, oltre a
 `command` dei tre server: senza WRITESET, `dba.createCluster()` interrompe
 la validazione dell'istanza. Se il Compose e' gia' avviato, ricreare i tre
 container server per applicare i nuovi argomenti (senza eliminare i volumi).
+
+### Bootstrap interrotto ed errant GTIDs
+
+Le istanze MySQL inizializzate indipendentemente possono avere GTID locali che
+non fanno parte della storia del cluster. Lo script usa
+`recoveryMethod: 'clone'` **solo per i nodi secondari mai registrati** e
+**senza schemi applicativi**, perché la clonazione cancella tutti i dati locali
+del destinatario. Il nodo 1 rimane il donatore iniziale.
+
+Se il cluster è stato creato sul nodo 1 e l'aggiunta del nodo 2 è fallita,
+il successivo avvio del bootstrap può continuare ad aggiungere i nodi mancanti.
+Se un membro è già registrato ma non è `ONLINE`, lo script si ferma invece
+di clonarlo: è un caso di recovery da diagnosticare.
+
+Per verificare da zero in laboratorio, se non ci sono dati da conservare:
+
+```powershell
+docker compose down -v
+docker compose up -d
+docker compose logs -f mysql-shell
+```
+
+Il comando `down -v` elimina permanentemente i volumi del laboratorio.
