@@ -28,6 +28,7 @@ services:
       - --log-replica-updates=ON
       - --binlog-checksum=NONE
       - --transaction-write-set-extraction=XXHASH64
+      - --binlog-transaction-dependency-tracking=WRITESET
       - --default-authentication-plugin=mysql_native_password
     ports:
       - "127.0.0.1:3301:3306"
@@ -47,6 +48,7 @@ services:
       - --log-replica-updates=ON
       - --binlog-checksum=NONE
       - --transaction-write-set-extraction=XXHASH64
+      - --binlog-transaction-dependency-tracking=WRITESET
       - --default-authentication-plugin=mysql_native_password
     ports:
       - "127.0.0.1:3302:3306"
@@ -66,6 +68,7 @@ services:
       - --log-replica-updates=ON
       - --binlog-checksum=NONE
       - --transaction-write-set-extraction=XXHASH64
+      - --binlog-transaction-dependency-tracking=WRITESET
       - --default-authentication-plugin=mysql_native_password
     ports:
       - "127.0.0.1:3303:3306"
