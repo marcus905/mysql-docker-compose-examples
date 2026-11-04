@@ -106,3 +106,11 @@ oppure pianificare separatamente un upgrade.
   esegue solo inizializzazione e verifica all'avvio dell'esercitazione.
 - La nuova configurazione e' stata sottoposta a verifiche statiche; eseguire
   il test completo con Docker Desktop prima di distribuirla agli studenti.
+
+### Nota su MySQL Shell 8.0.32
+
+Il container usa `mysqlsh --no-defaults`: a partire da 8.0.32 MySQL Shell legge
+automaticamente le sezioni `[client]` dei file MySQL e, senza questo flag,
+puo' tentare una connessione tramite socket locale invece che al server Docker.
+Il warning `Cannot set LC_ALL to locale en_US.UTF-8` e' separato dal problema
+socket e non dimostra da solo un fallimento di connessione.
