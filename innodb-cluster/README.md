@@ -114,3 +114,11 @@ automaticamente le sezioni `[client]` dei file MySQL e, senza questo flag,
 puo' tentare una connessione tramite socket locale invece che al server Docker.
 Il warning `Cannot set LC_ALL to locale en_US.UTF-8` e' separato dal problema
 socket e non dimostra da solo un fallimento di connessione.
+
+### Requisiti AdminAPI su MySQL 8.0.32
+
+Il bootstrap richiede `binlog_transaction_dependency_tracking=WRITESET`, oltre a
+`transaction_write_set_extraction=XXHASH64`. Entrambe le opzioni sono nel
+`command` dei tre server: senza WRITESET, `dba.createCluster()` interrompe
+la validazione dell'istanza. Se il Compose e' gia' avviato, ricreare i tre
+container server per applicare i nuovi argomenti (senza eliminare i volumi).
